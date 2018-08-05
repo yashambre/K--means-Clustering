@@ -1,0 +1,170 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+	<title><b>Assignment 4</b></title>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+</head>
+<body>
+	<h1><B><font color='blue'>Student ID:1001535797 </font></B></h1>
+	<form method="post" action="/hi">
+		<fieldset>	
+			<legend> QUIZ 6</legend>
+			<h1>Select magnitude range</h1>
+			<select name="check">
+				<option value="latitude">1</option>
+				<option value="longitude">2</option>
+				<option value="depth">3</option>
+				<option value="mag">4</option>
+				<optio value="nst">5</option>
+				<option value="gap">6</option>
+			</select> 
+
+			<select name="check1">
+				<option value="latitude">1</option>
+				<option value="longitude">2</option>
+				<option value="depth">3</option>
+				<option value="mag">4</option>
+				<optio value="nst">5</option>
+				<option value="gap">6</option>
+			</select>
+					<h1>counts</h1>
+					<input type="text" value="" name="check2"/>
+				<input type="submit" value="Search" name="Search"/>
+		</fieldset>			
+	</form> 
+{% if cluster %}
+
+	<script src="//d3js.org/d3.v3.min.js"></script>
+<script src="static/model.js"></script> 
+<script>
+var margin = {top: 100, right: 20, bottom: 80, left: 20},
+		width = 960 - margin.left - margin.right,
+		height = 500 - margin.top - margin.bottom,
+		translate_speed = 1000;
+
+var color = d3.scale.category10();
+
+var svg = d3.select("body").append("svg")
+		.attr("width", width + margin.left + margin.right)
+		.attr("height", height + margin.top + margin.bottom)
+	.append("g")
+		.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+
+var x = d3.scale.linear()
+		.range([0, width])
+		.domain([{{x_range[0] - 1}}, {{x_range[1] + 1}}]).nice();
+
+var y = d3.scale.linear()
+		.range([height, 0])
+		.domain([{{y_range[0] - 1}},{{y_range[1] + 1}}]).nice();
+
+var xAxis = d3.svg.axis()
+		.scale(x)
+		.orient("bottom");
+
+var yAxis = d3.svg.axis()
+		.scale(y)
+		.orient("left");
+
+svg.append('text')
+	.attr('x', width )
+	.attr('y', height +50)
+	.attr('class', 'status')
+	.text('Clusters: ')
+	.style('text-anchor', 'end')
+	.style('font-size', '20')
+
+svg.append('text')
+	.attr('x', width/2 )
+	.attr('y', -50)
+	.attr('class', 'step')
+	.text('Initialize clusters.')
+	.style('text-anchor', 'middle')
+	.style('font-size', '36')
+
+function initialize(){
+	// Set the number of clusters
+	var num_clusters = {{ cluster }};
+
+	// Generate a random sample of points
+	var samples = {{ search|tojson }}
+	
+	// Update View
+	d3.select('.status').text('Clusters: '+num_clusters)
+	
+	// Initialize the model
+	var k = new kmeans(num_clusters, samples)
+
+	// Plot this first round
+	plot(k)
+	
+	return k
+}
+
+function plot(k){
+	svg.selectAll('g').remove()
+	var g = svg.append('g');
+
+	g.selectAll(".dot")
+		.data(k.data)
+	.enter().append("circle")
+		.attr("class", "dot")
+		.attr("r", 3)
+		.attr("cx", function(d) { return x(d.x); })
+		.attr("cy", function(d) { return y(d.y); })
+		.style("fill", function(d) { return color(d.clusterNumber); })
+	
+	g.selectAll(".centroids")
+		.data(k.centroids)
+	 .enter().append('rect')
+			.attr('class', 'centroid')
+			.attr("x", function(d) { return x(d.x) - 2.5; })
+			.attr("y", function(d) { return y(d.y) - 2.5; })
+			.attr('width', 7)
+			.attr('height', 7)
+			.attr('rx', 1)
+			.attr('ry', 1)
+			.style("fill", function(d, i) { return color(i); })
+}
+
+function step(k){
+	k.recalculate_centroids()
+	k.update_clusters()
+	plot(k)
+}
+
+function run(){
+	var k = initialize(),
+		max_count = 100, 
+		updates = 0;
+
+	var go = setInterval(function(){
+		if (k.isStillMoving == 1) {
+			d3.select('.step').text('Assign and Update ('+updates+').')
+			step(k)
+			updates +=1
+		}else{
+			clearInterval(go);
+			console.log(k.dist_centroids)
+			$('#distc').empty();
+			$('#distc').append("<p>"+JSON.stringify(k.dist_centroids)+"</p>");
+		};
+	}, translate_speed);
+
+
+}
+
+run()
+
+d3.select(self.frameElement).style("height", (height+margin.top+margin.bottom) + "px");
+</script>
+
+{% endif %}
+
+
+<div id="distc"></div>
+	
+</body>
+</html>
